@@ -75,6 +75,37 @@ app.get('/api/candidate/:id', (req, res) => {
   });
 });
 
+// Route to display all parties
+app.get('/api/parties', (req, res) => {
+  const sql = `SELECT * FROM parties`;
+  db.query(sql, (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({
+      message: 'success',
+      data: rows
+    });
+  });
+});
+
+// Route to display an individual party
+app.get('/api/party/:id', (req, res) => {
+  const sql = `SELECT * FROM parties WHERE id = ?`;
+  const params = [req.params.id];
+  db.query(sql, params, (err, row) => {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    res.json({
+      message: 'success',
+      data: row
+    });
+  });
+});
+
 // Queries the database to test the connection -> Should return all the data in the 'candidate' table
 // The [db] object is using the [query()] method, which runs the SQL query and executes the call back with all the resulting rows that matche the query
 // Once this method executes the SQL command, the callback function captures the responses from the query in two variables: the [err], which is the error response, and [rows], which is the database query response
@@ -96,6 +127,28 @@ app.delete('/api/candidate/:id', (req, res) => {
     } else if (!result.affectedRows) {
       res.json({
         message: 'Candidate not found'
+      });
+    } else {
+      res.json({
+        message: 'deleted',
+        changes: result.affectedRows,
+        id: req.params.id
+      });
+    }
+  });
+});
+
+// Route for deleting parties
+app.delete('/api/party/:id', (req, res) => {
+  const sql = `DELETE FROM parties WHERE id = ?`;
+  const params = [req.params.id];
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      res.status(400).json({ error: res.message });
+      // checks if anything was deleted
+    } else if (!result.affectedRows) {
+      res.json({
+        message: 'Party not found'
       });
     } else {
       res.json({
@@ -147,6 +200,37 @@ app.post('/api/candidate', ({ body }, res) => {
       message: 'success',
       data: body
     });
+  });
+});
+
+// Update a candidate's party
+app.put('/api/candidate/:id', (req, res) => {
+  const sql = `UPDATE candidates SET party_id = ? 
+               WHERE id = ?`;
+  const params = [req.body.party_id, req.params.id];
+  const errors = inputCheck(req.body, 'party_id');
+
+  // Uses inputCheck() to check that a party_id was provided before we attempt to update the database
+  // Forces any PUT request to /api/candidate/:id to include a party_id property
+  if (errors) {
+    res.status(400).json({ error: errors });
+    return;
+  }
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      // check if a record was found
+    } else if (!result.affectedRows) {
+      res.json({
+        message: 'Candidate not found'
+      });
+    } else {
+      res.json({
+        message: 'success',
+        data: req.body,
+        changes: result.affectedRows
+      });
+    }
   });
 });
 
